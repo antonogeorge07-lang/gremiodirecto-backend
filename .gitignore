@@ -1,4 +1,8 @@
 __pycache__/
-*.pyc
-*.db
-GremioDirectoMobile/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+gremiodirecto.db
