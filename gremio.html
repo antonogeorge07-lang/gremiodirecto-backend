@@ -18,15 +18,15 @@
   <div id="status">Loading...</div>
 
   <script>
-    const API_BASE = 'https://gremiodirecto-backend-XXXX.up.railway.app';
+    const API_BASE = 'https://gremiodirecto-XXXX.up.railway.app';
 
     async function fetchUsers() {
       document.getElementById('status').textContent = 'Loading...';
       try {
         const response = await fetch(`${API_BASE}/users`);
-        const data = await response.json();
-        displayUsers(data.users);
-        document.getElementById('status').textContent = `${data.users.length} users`;
+        const users = await response.json();
+        displayUsers(users);
+        document.getElementById('status').textContent = `${users.length} users`;
       } catch (error) {
         document.getElementById('status').textContent = `Error: ${error}`;
       }
