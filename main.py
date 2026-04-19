@@ -1,114 +1,59 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
+import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gremiodirecto.db'
+CORS(app)
+
+# Production DB (Railway PostgreSQL)
+db_url = os.environ.get('DATABASE_URL', 'sqlite:///gremiodirecto.db')
+if db_url.startswith('postgres://'):
+    db_url = db_url.replace('postgres://', 'postgresql://')
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    type = db.Column(db.String(20), nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
+    type = db.Column(db.String(50))
+    name = db.Column(db.String(100))
+    email = db.Column(db.String(100))
     language = db.Column(db.String(10), default='es')
 
-class Activity(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.String(200), nullable=False)
-    worker_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
+# CREATE TABLES
 with app.app_context():
     db.create_all()
 
 @app.route('/')
 def hello():
-    return "Hello from GremioDirecto backend!"
+    return jsonify({"message": "GremioDirecto Backend LIVE! 🚀"})
 
 @app.route('/users', methods=['GET'])
 def get_users():
     users = User.query.all()
-    return {
-        'users': [
-            {
-                'id': u.id,
-                'type': u.type,
-                'name': u.name,
-                'email': u.email,
-                'language': u.language
-            }
-            for u in users
-        ]
-    }
+    return jsonify([{
+        "id": u.id, "type": u.type, "name": u.name,
+        "email": u.email, "language": u.language
+    } for u in users])
 
 @app.route('/users', methods=['POST'])
 def create_user():
-    data = request.get_json()
+    data = request.json
     user = User(
-        type=data['type'],
-        name=data['name'],
-        email=data['email'],
+        type=data.get('type', 'worker'),
+        name=data.get('name'),
+        email=data.get('email'),
         language=data.get('language', 'es')
     )
     db.session.add(user)
     db.session.commit()
-    return {
-        'id': user.id,
-        'type': user.type,
-        'name': user.name,
-        'email': user.email,
-        'language': user.language
-    }
+    return jsonify({
+        "id": user.id, "type": user.type, "name": user.name,
+        "email": user.email, "language": user.language
+    }), 201
 
-@app.route('/workers', methods=['POST'])
-def create_worker():
-    data = request.get_json()
-    user = User(
-        type='worker',
-        name=data['name'],
-        email=data['email'],
-        language=data.get('language', 'es')
-    )
-    db.session.add(user)
-    db.session.commit()
-    return {
-        'id': user.id,
-        'type': user.type,
-        'name': user.name,
-        'email': user.email,
-        'language': user.language
-    }
-
-@app.route('/workers/available', methods=['GET'])
-def get_available_workers():
-    users = User.query.filter_by(type='worker').all()
-    return {
-        'workers': [
-            {
-                'id': u.id,
-                'name': u.name,
-                'email': u.email,
-                'language': u.language
-            }
-            for u in users
-        ]
-    }
-
-@app.route('/activity', methods=['POST'])
-def create_activity():
-    data = request.get_json()
-    activity = Activity(
-        description=data['description'],
-        worker_id=data['worker_id']
-    )
-    db.session.add(activity)
-    db.session.commit()
-    return {
-        'id': activity.id,
-        'description': activity.description,
-        'worker_id': activity.worker_id
-    }
-
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
